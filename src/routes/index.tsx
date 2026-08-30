@@ -167,8 +167,8 @@ function IdePage() {
         </span>
       </header>
 
-      <ResizablePanelGroup direction="horizontal" className="flex-1">
-        <ResizablePanel defaultSize={34} minSize={24}>
+      <ResizablePanelGroup orientation="horizontal" className="flex-1">
+        <ResizablePanel defaultSize="34" minSize="24">
           <section className="flex h-full flex-col bg-surface">
             <ActivityLog entries={entries} />
             <CommandInput
@@ -181,7 +181,7 @@ function IdePage() {
 
         <ResizableHandle />
 
-        <ResizablePanel defaultSize={66} minSize={35}>
+        <ResizablePanel defaultSize="66" minSize="35">
           <section className="flex h-full flex-col bg-surface">
             <ProjectToolbar
               projectName={projectName}
@@ -202,8 +202,8 @@ function IdePage() {
                 <PreviewFrame key={previewKey} doc={previewDoc} />
               </div>
             ) : (
-              <ResizablePanelGroup direction="horizontal" className="flex-1">
-                <ResizablePanel defaultSize={26} minSize={15}>
+              <ResizablePanelGroup orientation="horizontal" className="flex-1">
+                <ResizablePanel defaultSize="26" minSize="15">
                   <div className="h-full border-r border-border bg-background/40">
                     <FileTree
                       files={files}
@@ -213,7 +213,7 @@ function IdePage() {
                   </div>
                 </ResizablePanel>
                 <ResizableHandle />
-                <ResizablePanel defaultSize={74}>
+                <ResizablePanel defaultSize="74">
                   <CodeViewer
                     path={activePath}
                     content={activeContent}
