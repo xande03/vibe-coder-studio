@@ -1,305 +1,125 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useServerFn } from "@tanstack/react-start";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { toast } from "sonner";
-import { Bot, Moon, PanelLeftClose, PanelLeftOpen, Sun } from "lucide-react";
-import {
-  ResizableHandle,
-  ResizablePanel,
-  ResizablePanelGroup,
-} from "@/components/ui/resizable";
-import { ActivityLog } from "@/components/ide/ActivityLog";
-import { CommandInput } from "@/components/ide/CommandInput";
-import { FileTree } from "@/components/ide/FileTree";
-import { CodeViewer } from "@/components/ide/CodeViewer";
-import { PreviewFrame } from "@/components/ide/PreviewFrame";
-import { ProjectToolbar } from "@/components/ide/ProjectToolbar";
-import { runAgent } from "@/lib/agent.functions";
-import {
-  buildPreviewDocument,
-  downloadProjectZip,
-  mergeFiles,
-  type LogEntry,
-  type ProjectFile,
-  type ServerStatus,
-} from "@/lib/project";
+import { CheckCircle2, ChevronRight, FileDiff, FolderX, Loader2, Sparkles, Terminal, XCircle } from "lucide-react";
+import { type LogEntry } from "@/lib/project";
 
-export const Route = createFileRoute("/")({
-  head: () => ({
-    scripts: [
-      {
-        children: `(function(){try{var t=localStorage.getItem('vibe-theme');if(t==='light'){document.documentElement.classList.remove('dark')}else{document.documentElement.classList.add('dark')}}catch(e){document.documentElement.classList.add('dark')}})();`,
-      },
-    ],
-    meta: [
-      { title: "Xerife Brasa — Vibe Coding com agente de IA" },
-      {
-        name: "description",
-        content:
-          "Descreva seu projeto em linguagem natural e o agente constrói o código full stack, com preview ao vivo, árvore de arquivos e download em .zip.",
-      },
-      { property: "og:title", content: "Xerife Brasa — Vibe Coding" },
-      {
-        property: "og:description",
-        content:
-          "IDE de vibe coding: o agente planeja, gera e modifica projetos full stack em tempo real.",
-      },
-    ],
-  }),
-  component: IdePage,
-});
-
-const PROGRESS_STEPS = [
-  "Interpretando a solicitação...",
-  "Planejando a arquitetura do projeto...",
-  "Gerando código (frontend e backend)...",
-  "Resolvendo dependências e configurações...",
-  "Iniciando servidores e atualizando o preview...",
-];
-
-function IdePage() {
-  const callAgent = useServerFn(runAgent);
-  const [files, setFiles] = useState<ProjectFile[]>([]);
-  const [entries, setEntries] = useState<LogEntry[]>([]);
-  const [projectName, setProjectName] = useState("");
-  const [activePath, setActivePath] = useState<string | null>(null);
-  const [view, setView] = useState<"preview" | "code">("preview");
-  const [busy, setBusy] = useState(false);
-  const [previewKey, setPreviewKey] = useState(0);
-  const [servers, setServers] = useState<ServerStatus[]>([]);
-  const [leftPanelOpen, setLeftPanelOpen] = useState(true);
-  const leftPanelRef = useRef<any>(null);
-
-  const [theme, setTheme] = useState<"dark" | "light">(() => {
-    if (typeof window === "undefined") return "dark";
-    const stored = window.localStorage.getItem("vibe-theme");
-    return stored === "light" ? "light" : "dark";
+function formatTime(timestamp: number) {
+  return new Date(timestamp).toLocaleTimeString("pt-BR", {
+    hour: "2-digit",
+    minute: "2-digit",
   });
+}
 
-  useEffect(() => {
-    const root = document.documentElement;
-    root.classList.toggle("dark", theme === "dark");
-    root.style.colorScheme = theme === "dark" ? "dark" : "light";
-    window.localStorage.setItem("vibe-theme", theme);
-  }, [theme]);
-
-  const toggleTheme = useCallback(() => {
-    setTheme((t) => (t === "dark" ? "light" : "dark"));
-  }, []);
-
-  const toggleLeftPanel = useCallback(() => {
-    const panel = leftPanelRef.current;
-    if (!panel) return;
-    if (leftPanelOpen) {
-      panel.collapse();
-    } else {
-      panel.expand();
-    }
-  }, [leftPanelOpen]);
-
-  const previewDoc = useMemo(() => buildPreviewDocument(files), [files]);
-  const activeContent =
-    files.find((f) => f.path === activePath)?.content ?? "";
-
-  const submit = useCallback(
-    async (instruction: string) => {
-      const id = `${Date.now()}`;
-      setBusy(true);
-      setEntries((prev) => [
-        ...prev,
-        {
-          id,
-          instruction,
-          steps: [PROGRESS_STEPS[0]!],
-          status: "running",
-          createdAt: Date.now(),
-        },
-      ]);
-
-      let step = 1;
-      const ticker = window.setInterval(() => {
-        if (step >= PROGRESS_STEPS.length) return;
-        const next = PROGRESS_STEPS[step++]!;
-        setEntries((prev) =>
-          prev.map((e) =>
-            e.id === id ? { ...e, steps: [...e.steps, next] } : e,
-          ),
-        );
-      }, 2600);
-
-      try {
-        const history = entries
-          .filter((e) => e.summary)
-          .map((e) => ({ instruction: e.instruction, summary: e.summary! }));
-
-        const result = await callAgent({
-          data: { instruction, files, history },
-        });
-
-        window.clearInterval(ticker);
-
-        const merged = mergeFiles(files, result.files, result.deleted);
-        setFiles(merged);
-        if (result.projectName) setProjectName(result.projectName);
-        if (result.servers.length > 0) setServers(result.servers);
-        else if (servers.length === 0)
-          setServers([
-            { name: "Frontend", status: "Build concluído" },
-            { name: "Backend", status: "Rodando" },
-          ]);
-
-        const firstChanged = result.files[0]?.path;
-        if (firstChanged) setActivePath(firstChanged.replace(/^\.?\//, ""));
-        setPreviewKey((k) => k + 1);
-
-        setEntries((prev) =>
-          prev.map((e) =>
-            e.id === id
-              ? {
-                  ...e,
-                  status: "done",
-                  steps: [
-                    ...e.steps,
-                    ...result.plan.slice(0, 6),
-                    "Tarefa concluída.",
-                  ],
-                  summary: result.summary,
-                  commands: result.commands,
-                  changed: result.files.map((f) => f.path),
-                  deleted: result.deleted,
-                }
-              : e,
-          ),
-        );
-        toast.success("Projeto atualizado pelo agente.");
-      } catch (error) {
-        window.clearInterval(ticker);
-        const message =
-          error instanceof Error ? error.message : "Falha inesperada.";
-        setEntries((prev) =>
-          prev.map((e) =>
-            e.id === id ? { ...e, status: "error", summary: message } : e,
-          ),
-        );
-        toast.error(message);
-      } finally {
-        setBusy(false);
-      }
-    },
-    [callAgent, entries, files, servers.length],
-  );
+export function ActivityLog({ entries }: { entries: LogEntry[] }) {
+  if (entries.length === 0) {
+    return (
+      <div className="flex flex-1 flex-col items-center justify-center gap-2 px-4 py-10 text-center">
+        <div className="grid size-10 place-items-center rounded-2xl bg-primary/10 text-primary shadow-inner">
+          <Sparkles className="size-5" />
+        </div>
+        <p className="text-sm font-semibold text-foreground">Nenhuma atividade ainda</p>
+        <p className="max-w-[230px] text-mono-xs leading-relaxed text-muted-foreground">
+          Descreva o que você quer construir e o agente começa a trabalhar.
+        </p>
+      </div>
+    );
+  }
 
   return (
-    <main className="flex h-screen flex-col overflow-hidden bg-background">
-      <header className="flex items-center gap-3 border-b border-border/60 bg-surface/80 backdrop-blur-xl px-4 py-2.5 shadow-sm">
-        <div className="grid size-9 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-md ring-1 ring-primary/30 transition-transform hover:scale-105">
-          <Bot className="size-4" />
-        </div>
-        <h1 className="text-sm font-bold tracking-tight text-foreground">
-          Xerife Brasa
-        </h1>
-        <span className="rounded-full border border-primary/20 bg-elevated/70 px-3 py-1 text-mono-xs text-muted-foreground shadow-sm backdrop-blur">
-          vibe coding · agente de IA
-        </span>
+    <div className="flex-1 space-y-2.5 overflow-y-auto px-3 py-3">
+      {entries.map((entry) => {
+        const status =
+          entry.status === "error"
+            ? { icon: XCircle, className: "text-red-500" }
+            : entry.status === "done"
+              ? { icon: CheckCircle2, className: "text-emerald-500" }
+              : { icon: Loader2, className: "animate-spin text-primary" };
+        const StatusIcon = status.icon;
 
-        <div className="ml-auto flex items-center gap-2">
-          <button
-            type="button"
-            onClick={toggleLeftPanel}
-            aria-label={leftPanelOpen ? "Minimizar painel lateral" : "Maximizar painel lateral"}
-            title={leftPanelOpen ? "Minimizar painel" : "Maximizar painel"}
-            className="grid size-8 place-items-center rounded-full border border-border bg-elevated/70 text-muted-foreground shadow-sm transition-all hover:shadow-md hover:text-foreground active:scale-95"
+        return (
+          <article
+            key={entry.id}
+            className={`rounded-2xl border p-3 shadow-sm transition-all ${
+              entry.status === "error"
+                ? "border-red-500/30 bg-red-500/5"
+                : entry.status === "running"
+                  ? "border-primary/20 bg-primary/5"
+                  : "border-border/60 bg-elevated/60"
+            }`}
           >
-            {leftPanelOpen ? <PanelLeftClose className="size-4" /> : <PanelLeftOpen className="size-4" />}
-          </button>
-          <button
-            type="button"
-            onClick={toggleTheme}
-            aria-label={theme === "dark" ? "Ativar tema claro" : "Ativar tema escuro"}
-            className="grid size-8 place-items-center rounded-full border border-border bg-elevated/70 text-muted-foreground shadow-sm transition-all hover:shadow-md hover:text-foreground active:scale-95"
-          >
-            {theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
-          </button>
-        </div>
-      </header>
-
-      <ResizablePanelGroup orientation="horizontal" className="flex-1">
-        <ResizablePanel
-          ref={leftPanelRef}
-          defaultSize="34"
-          minSize="24"
-          collapsible
-          collapsedSize={0}
-          onCollapse={() => setLeftPanelOpen(false)}
-          onExpand={() => setLeftPanelOpen(true)}
-        >
-          <section className="flex h-full flex-col bg-surface/95 backdrop-blur">
-            <ActivityLog entries={entries} />
-            <CommandInput
-              onSubmit={submit}
-              busy={busy}
-              hasProject={files.length > 0}
-            />
-          </section>
-        </ResizablePanel>
-
-        <ResizableHandle />
-
-        <ResizablePanel defaultSize="66" minSize="35">
-          <section className="flex h-full flex-col bg-surface">
-            <ProjectToolbar
-              projectName={projectName}
-              view={view}
-              onViewChange={setView}
-              servers={servers}
-              fileCount={files.length}
-              busy={busy}
-              onRefresh={() => setPreviewKey((k) => k + 1)}
-              onDownload={() => {
-                void downloadProjectZip(files, projectName);
-                toast.success("Download iniciado.");
-              }}
-            />
-
-            {view === "preview" ? (
-              <div className="flex-1 overflow-hidden rounded-bl-2xl">
-                <PreviewFrame key={previewKey} doc={previewDoc} />
+            <header className="flex items-start gap-2.5">
+              <div className="mt-0.5 grid size-7 shrink-0 place-items-center rounded-full bg-background/80 text-muted-foreground shadow-sm">
+                <StatusIcon className={`size-3.5 ${status.className}`} />
               </div>
-            ) : (
-              <ResizablePanelGroup orientation="horizontal" className="flex-1">
-                <ResizablePanel defaultSize="26" minSize="15">
-                  <div className="h-full border-r border-border/60 bg-background/40">
-                    <FileTree
-                      files={files}
-                      activePath={activePath}
-                      onSelect={setActivePath}
-                    />
+              <div className="min-w-0 flex-1">
+                <div className="flex items-start justify-between gap-2">
+                  <p className="line-clamp-2 text-xs font-medium leading-relaxed text-foreground">
+                    {entry.instruction}
+                  </p>
+                  <time className="shrink-0 text-mono-xs text-muted-foreground/70">
+                    {formatTime(entry.createdAt)}
+                  </time>
+                </div>
+
+                {entry.steps.length > 0 && (
+                  <ul className="mt-2 space-y-1">
+                    {entry.steps.map((step, index) => (
+                      <li
+                        key={index}
+                        className="flex items-center gap-1.5 text-mono-xs text-muted-foreground"
+                      >
+                        <ChevronRight className="size-3 shrink-0 text-primary/60" />
+                        {step}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
+                {entry.summary && (
+                  <p className="mt-2 rounded-xl bg-background/70 px-2.5 py-2 text-xs leading-relaxed text-surface-foreground">
+                    {entry.summary}
+                  </p>
+                )}
+
+                {entry.commands && entry.commands.length > 0 && (
+                  <div className="mt-2 space-y-1">
+                    {entry.commands.map((command, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center gap-1.5 overflow-hidden rounded-lg bg-background/80 px-2 py-1 font-mono text-mono-xs text-primary"
+                      >
+                        <Terminal className="size-3 shrink-0" />
+                        <span className="truncate">{command}</span>
+                      </div>
+                    ))}
                   </div>
-                </ResizablePanel>
-                <ResizableHandle />
-                <ResizablePanel defaultSize="74">
-                  <CodeViewer
-                    path={activePath}
-                    content={activeContent}
-                    onChange={(value) =>
-                      setFiles((prev) =>
-                        prev.map((f) =>
-                          f.path === activePath ? { ...f, content: value } : f,
-                        ),
-                      )
-                    }
-                    dark={theme === "dark"}
-                  />
-                </ResizablePanel>
-              </ResizablePanelGroup>
-            )}
-          </section>
-        </ResizablePanel>
-      </ResizablePanelGroup>
-    </main>
+                )}
+
+                {entry.changed?.length || entry.deleted?.length ? (
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {entry.changed?.map((path) => (
+                      <span
+                        key={path}
+                        className="inline-flex items-center gap-1 rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-mono-xs text-primary"
+                      >
+                        <FileDiff className="size-3" />
+                        <span className="max-w-[180px] truncate">{path}</span>
+                      </span>
+                    ))}
+                    {entry.deleted?.map((path) => (
+                      <span
+                        key={path}
+                        className="inline-flex items-center gap-1 rounded-full border border-red-500/20 bg-red-500/10 px-2 py-0.5 text-mono-xs text-red-500"
+                      >
+                        <FolderX className="size-3" />
+                        <span className="max-w-[180px] truncate">{path}</span>
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            </header>
+          </article>
+        );
+      })}
+    </div>
   );
 }
-"
-    },
-    {
-      "path": "src/components/ide/ProjectToolbar.tsx
