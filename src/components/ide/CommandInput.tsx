@@ -37,7 +37,7 @@ export function CommandInput({
               type="button"
               disabled={busy}
               onClick={() => send(s)}
-              className="rounded-full border border-border bg-elevated px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground disabled:opacity-50"
+              className="rounded-full border border-border bg-elevated px-3 py-1.5 text-xs text-muted-foreground shadow-sm transition-all hover:scale-105 hover:border-primary/50 hover:text-foreground hover:shadow-md disabled:opacity-50"
             >
               {s}
             </button>
@@ -45,7 +45,7 @@ export function CommandInput({
         </div>
       )}
 
-      <div className="flex items-end gap-2 rounded-lg border border-border bg-elevated p-2 focus-within:border-primary/60">
+      <div className="flex items-end gap-2 rounded-xl border border-border bg-elevated p-2 shadow-sm transition-all focus-within:border-primary/60 focus-within:shadow-md">
         <textarea
           ref={ref}
           rows={2}
@@ -74,7 +74,7 @@ export function CommandInput({
           onClick={() => send(value)}
           disabled={busy || !value.trim()}
           aria-label="Enviar solicitação"
-          className="grid size-9 shrink-0 place-items-center rounded-md bg-primary text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-40"
+          className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground shadow transition-all hover:shadow-md hover:opacity-90 active:scale-95 disabled:opacity-40"
         >
           {busy ? (
             <Loader2 className="size-4 animate-spin" />

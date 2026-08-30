@@ -22,7 +22,7 @@ function Node({
         type="button"
         onClick={() => onSelect(node.path)}
         style={{ paddingLeft: `${depth * 12 + 8}px` }}
-        className={`flex w-full items-center gap-1.5 py-1 pr-2 text-left text-mono-xs transition-colors ${
+        className={`flex w-full items-center gap-1.5 py-1 pr-2 text-left text-mono-xs transition-all rounded-md ${
           active
             ? "bg-primary/12 text-primary"
             : "text-muted-foreground hover:bg-elevated hover:text-foreground"
@@ -40,7 +40,7 @@ function Node({
         type="button"
         onClick={() => setOpen((v) => !v)}
         style={{ paddingLeft: `${depth * 12 + 8}px` }}
-        className="flex w-full items-center gap-1.5 py-1 pr-2 text-left text-mono-xs text-surface-foreground transition-colors hover:bg-elevated"
+        className="flex w-full items-center gap-1.5 py-1 pr-2 text-left text-mono-xs text-surface-foreground transition-all hover:bg-elevated rounded-md"
       >
         {open ? (
           <ChevronDown className="size-3 shrink-0" />

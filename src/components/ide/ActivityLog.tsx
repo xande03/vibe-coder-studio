@@ -27,7 +27,7 @@ export function ActivityLog({ entries }: { entries: LogEntry[] }) {
   if (entries.length === 0) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-3 px-8 text-center">
-        <div className="rounded-full border border-border bg-elevated p-3">
+        <div className="rounded-full border border-border bg-elevated p-3 shadow-sm">
           <Sparkles className="size-5 text-primary" />
         </div>
         <h2 className="text-base font-semibold">Descreva o que quer construir</h2>
@@ -42,7 +42,7 @@ export function ActivityLog({ entries }: { entries: LogEntry[] }) {
   return (
     <div className="flex-1 space-y-4 overflow-y-auto p-4">
       {entries.map((entry) => (
-        <article key={entry.id} className="rounded-lg border border-border bg-elevated/60">
+        <article key={entry.id} className="rounded-xl border border-border bg-elevated/60 shadow-sm">
           <header className="flex items-start gap-2 border-b border-border px-3 py-2.5">
             <Terminal className="mt-0.5 size-4 shrink-0 text-accent" />
             <p className="flex-1 text-sm leading-snug text-foreground">
@@ -69,7 +69,7 @@ export function ActivityLog({ entries }: { entries: LogEntry[] }) {
             </ol>
 
             {entry.commands && entry.commands.length > 0 && (
-              <div className="rounded-md border border-border bg-background/60 p-2">
+              <div className="rounded-lg border border-border bg-background/60 p-2">
                 {entry.commands.map((cmd) => (
                   <p key={cmd} className="text-mono-xs text-accent">
                     $ {cmd}
@@ -79,7 +79,7 @@ export function ActivityLog({ entries }: { entries: LogEntry[] }) {
             )}
 
             {entry.summary && (
-              <div className="rounded-md border border-primary/25 bg-primary/5 p-2.5">
+              <div className="rounded-lg border border-primary/25 bg-primary/5 p-2.5">
                 <p className="text-sm leading-relaxed text-surface-foreground">
                   {entry.summary}
                 </p>

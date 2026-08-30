@@ -29,7 +29,7 @@ export function ProjectToolbar({
         </span>
       </div>
 
-      <div className="ml-2 flex rounded-md border border-border bg-elevated p-0.5">
+      <div className="ml-2 flex rounded-lg border border-border bg-elevated p-0.5 shadow-sm">
         {(
           [
             { id: "preview" as const, label: "Preview", Icon: Eye },
@@ -40,9 +40,9 @@ export function ProjectToolbar({
             key={id}
             type="button"
             onClick={() => onViewChange(id)}
-            className={`flex items-center gap-1.5 rounded px-2.5 py-1 text-xs transition-colors ${
+            className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs transition-all ${
               view === id
-                ? "bg-primary text-primary-foreground"
+                ? "bg-primary text-primary-foreground shadow-sm"
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
@@ -56,7 +56,7 @@ export function ProjectToolbar({
         {servers.map((server) => (
           <span
             key={server.name}
-            className="flex items-center gap-1.5 rounded-full border border-border bg-elevated px-2.5 py-1 text-mono-xs text-muted-foreground"
+            className="flex items-center gap-1.5 rounded-full border border-border bg-elevated px-2.5 py-1 text-mono-xs text-muted-foreground shadow-sm"
           >
             <span
               className={`size-1.5 rounded-full ${
@@ -71,7 +71,7 @@ export function ProjectToolbar({
           type="button"
           onClick={onRefresh}
           aria-label="Recarregar preview"
-          className="grid size-8 place-items-center rounded-md border border-border bg-elevated text-muted-foreground transition-colors hover:text-foreground"
+          className="grid size-8 place-items-center rounded-full border border-border bg-elevated text-muted-foreground shadow-sm transition-all hover:shadow-md hover:text-foreground active:scale-95"
         >
           <RefreshCw className="size-3.5" />
         </button>
@@ -80,7 +80,7 @@ export function ProjectToolbar({
           type="button"
           onClick={onDownload}
           disabled={fileCount === 0}
-          className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-40"
+          className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground shadow transition-all hover:shadow-md hover:opacity-90 active:scale-95 disabled:opacity-40"
         >
           <Download className="size-3.5" />
           Download .zip

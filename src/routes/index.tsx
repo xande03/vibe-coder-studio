@@ -179,19 +179,19 @@ function IdePage() {
 
   return (
     <main className="flex h-screen flex-col overflow-hidden">
-      <header className="flex items-center gap-2 border-b border-border px-4 py-2.5">
-        <div className="grid size-7 place-items-center rounded-md bg-primary text-primary-foreground">
+      <header className="flex items-center gap-2 border-b border-border bg-surface/80 backdrop-blur-sm px-4 py-2.5">
+        <div className="grid size-8 place-items-center rounded-xl bg-primary text-primary-foreground shadow-sm">
           <Bot className="size-4" />
         </div>
         <h1 className="text-sm font-semibold tracking-tight">Agnes IDE</h1>
-        <span className="rounded-full border border-border bg-elevated px-2 py-0.5 text-mono-xs text-muted-foreground">
+        <span className="rounded-full border border-border bg-elevated px-2.5 py-0.5 text-mono-xs text-muted-foreground shadow-sm">
           vibe coding · agnes-2.5-flash
         </span>
         <button
           type="button"
           onClick={toggleTheme}
           aria-label={theme === "dark" ? "Ativar tema claro" : "Ativar tema escuro"}
-          className="ml-auto grid size-8 place-items-center rounded-md border border-border bg-elevated text-muted-foreground transition-colors hover:text-foreground"
+          className="ml-auto grid size-8 place-items-center rounded-full border border-border bg-elevated text-muted-foreground shadow-sm transition-all hover:shadow-md hover:text-foreground active:scale-95"
         >
           {theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
         </button>
@@ -228,7 +228,7 @@ function IdePage() {
             />
 
             {view === "preview" ? (
-              <div className="flex-1 overflow-hidden">
+              <div className="flex-1 overflow-hidden rounded-bl-xl">
                 <PreviewFrame key={previewKey} doc={previewDoc} />
               </div>
             ) : (
