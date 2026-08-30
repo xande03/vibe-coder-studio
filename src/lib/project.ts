@@ -63,7 +63,8 @@ export function buildPreviewDocument(files: ProjectFile[]): string {
     : "";
 
   const resolve = (ref: string) => {
-    const clean = ref.replace(/^\.\//, "").replace(/^\//, "").split("?")[0];
+    const clean =
+      ref.replace(/^\.\//, "").replace(/^\//, "").split("?")[0] ?? "";
     return (
       findFile(files, [baseDir + clean, clean]) ??
       files.find((f) => f.path.endsWith(clean))
