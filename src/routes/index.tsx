@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Bot, Moon, Sun } from "lucide-react";
+import { Bot, Moon, PanelLeftClose, PanelLeftOpen, Sun } from "lucide-react";
 import {
   ResizableHandle,
   ResizablePanel,
@@ -32,13 +32,13 @@ export const Route = createFileRoute("/")({
       },
     ],
     meta: [
-      { title: "Agnes IDE — Vibe Coding com agente de IA" },
+      { title: "Xerife Brasa — Vibe Coding com agente de IA" },
       {
         name: "description",
         content:
-          "Descreva seu projeto em linguagem natural e o agente agnes-2.5-flash constrói o código full stack, com preview ao vivo, árvore de arquivos e download em .zip.",
+          "Descreva seu projeto em linguagem natural e o agente constrói o código full stack, com preview ao vivo, árvore de arquivos e download em .zip.",
       },
-      { property: "og:title", content: "Agnes IDE — Vibe Coding com agente de IA" },
+      { property: "og:title", content: "Xerife Brasa — Vibe Coding" },
       {
         property: "og:description",
         content:
@@ -67,6 +67,8 @@ function IdePage() {
   const [busy, setBusy] = useState(false);
   const [previewKey, setPreviewKey] = useState(0);
   const [servers, setServers] = useState<ServerStatus[]>([]);
+  const [leftPanelOpen, setLeftPanelOpen] = useState(true);
+  const leftPanelRef = useRef<any>(null);
 
   const [theme, setTheme] = useState<"dark" | "light">(() => {
     if (typeof window === "undefined") return "dark";
@@ -84,6 +86,16 @@ function IdePage() {
   const toggleTheme = useCallback(() => {
     setTheme((t) => (t === "dark" ? "light" : "dark"));
   }, []);
+
+  const toggleLeftPanel = useCallback(() => {
+    const panel = leftPanelRef.current;
+    if (!panel) return;
+    if (leftPanelOpen) {
+      panel.collapse();
+    } else {
+      panel.expand();
+    }
+  }, [leftPanelOpen]);
 
   const previewDoc = useMemo(() => buildPreviewDocument(files), [files]);
   const activeContent =
@@ -178,28 +190,50 @@ function IdePage() {
   );
 
   return (
-    <main className="flex h-screen flex-col overflow-hidden">
-      <header className="flex items-center gap-2 border-b border-border bg-surface/80 backdrop-blur-sm px-4 py-2.5">
-        <div className="grid size-8 place-items-center rounded-xl bg-primary text-primary-foreground shadow-sm">
+    <main className="flex h-screen flex-col overflow-hidden bg-background">
+      <header className="flex items-center gap-3 border-b border-border/60 bg-surface/80 backdrop-blur-xl px-4 py-2.5 shadow-sm">
+        <div className="grid size-9 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-md ring-1 ring-primary/30 transition-transform hover:scale-105">
           <Bot className="size-4" />
         </div>
-        <h1 className="text-sm font-semibold tracking-tight">Agnes IDE</h1>
-        <span className="rounded-full border border-border bg-elevated px-2.5 py-0.5 text-mono-xs text-muted-foreground shadow-sm">
-          vibe coding · agnes-2.5-flash
+        <h1 className="text-sm font-bold tracking-tight text-foreground">
+          Xerife Brasa
+        </h1>
+        <span className="rounded-full border border-primary/20 bg-elevated/70 px-3 py-1 text-mono-xs text-muted-foreground shadow-sm backdrop-blur">
+          vibe coding · agente de IA
         </span>
-        <button
-          type="button"
-          onClick={toggleTheme}
-          aria-label={theme === "dark" ? "Ativar tema claro" : "Ativar tema escuro"}
-          className="ml-auto grid size-8 place-items-center rounded-full border border-border bg-elevated text-muted-foreground shadow-sm transition-all hover:shadow-md hover:text-foreground active:scale-95"
-        >
-          {theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
-        </button>
+
+        <div className="ml-auto flex items-center gap-2">
+          <button
+            type="button"
+            onClick={toggleLeftPanel}
+            aria-label={leftPanelOpen ? "Minimizar painel lateral" : "Maximizar painel lateral"}
+            title={leftPanelOpen ? "Minimizar painel" : "Maximizar painel"}
+            className="grid size-8 place-items-center rounded-full border border-border bg-elevated/70 text-muted-foreground shadow-sm transition-all hover:shadow-md hover:text-foreground active:scale-95"
+          >
+            {leftPanelOpen ? <PanelLeftClose className="size-4" /> : <PanelLeftOpen className="size-4" />}
+          </button>
+          <button
+            type="button"
+            onClick={toggleTheme}
+            aria-label={theme === "dark" ? "Ativar tema claro" : "Ativar tema escuro"}
+            className="grid size-8 place-items-center rounded-full border border-border bg-elevated/70 text-muted-foreground shadow-sm transition-all hover:shadow-md hover:text-foreground active:scale-95"
+          >
+            {theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
+          </button>
+        </div>
       </header>
 
       <ResizablePanelGroup orientation="horizontal" className="flex-1">
-        <ResizablePanel defaultSize="34" minSize="24">
-          <section className="flex h-full flex-col bg-surface">
+        <ResizablePanel
+          ref={leftPanelRef}
+          defaultSize="34"
+          minSize="24"
+          collapsible
+          collapsedSize={0}
+          onCollapse={() => setLeftPanelOpen(false)}
+          onExpand={() => setLeftPanelOpen(true)}
+        >
+          <section className="flex h-full flex-col bg-surface/95 backdrop-blur">
             <ActivityLog entries={entries} />
             <CommandInput
               onSubmit={submit}
@@ -228,13 +262,13 @@ function IdePage() {
             />
 
             {view === "preview" ? (
-              <div className="flex-1 overflow-hidden rounded-bl-xl">
+              <div className="flex-1 overflow-hidden rounded-bl-2xl">
                 <PreviewFrame key={previewKey} doc={previewDoc} />
               </div>
             ) : (
               <ResizablePanelGroup orientation="horizontal" className="flex-1">
                 <ResizablePanel defaultSize="26" minSize="15">
-                  <div className="h-full border-r border-border bg-background/40">
+                  <div className="h-full border-r border-border/60 bg-background/40">
                     <FileTree
                       files={files}
                       activePath={activePath}
@@ -265,3 +299,7 @@ function IdePage() {
     </main>
   );
 }
+"
+    },
+    {
+      "path": "src/components/ide/ProjectToolbar.tsx

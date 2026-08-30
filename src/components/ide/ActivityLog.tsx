@@ -1,102 +1,305 @@
-import { useEffect, useRef } from "react";
+import { createFileRoute } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
+import { Bot, Moon, PanelLeftClose, PanelLeftOpen, Sun } from "lucide-react";
 import {
-  CheckCircle2,
-  CircleDashed,
-  Loader2,
-  Sparkles,
-  Terminal,
-  TriangleAlert,
-} from "lucide-react";
-import type { LogEntry } from "@/lib/project";
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from "@/components/ui/resizable";
+import { ActivityLog } from "@/components/ide/ActivityLog";
+import { CommandInput } from "@/components/ide/CommandInput";
+import { FileTree } from "@/components/ide/FileTree";
+import { CodeViewer } from "@/components/ide/CodeViewer";
+import { PreviewFrame } from "@/components/ide/PreviewFrame";
+import { ProjectToolbar } from "@/components/ide/ProjectToolbar";
+import { runAgent } from "@/lib/agent.functions";
+import {
+  buildPreviewDocument,
+  downloadProjectZip,
+  mergeFiles,
+  type LogEntry,
+  type ProjectFile,
+  type ServerStatus,
+} from "@/lib/project";
 
-function StatusIcon({ status }: { status: LogEntry["status"] }) {
-  if (status === "running")
-    return <Loader2 className="size-4 animate-spin text-primary" />;
-  if (status === "error")
-    return <TriangleAlert className="size-4 text-destructive" />;
-  return <CheckCircle2 className="size-4 text-success" />;
-}
+export const Route = createFileRoute("/")({
+  head: () => ({
+    scripts: [
+      {
+        children: `(function(){try{var t=localStorage.getItem('vibe-theme');if(t==='light'){document.documentElement.classList.remove('dark')}else{document.documentElement.classList.add('dark')}}catch(e){document.documentElement.classList.add('dark')}})();`,
+      },
+    ],
+    meta: [
+      { title: "Xerife Brasa — Vibe Coding com agente de IA" },
+      {
+        name: "description",
+        content:
+          "Descreva seu projeto em linguagem natural e o agente constrói o código full stack, com preview ao vivo, árvore de arquivos e download em .zip.",
+      },
+      { property: "og:title", content: "Xerife Brasa — Vibe Coding" },
+      {
+        property: "og:description",
+        content:
+          "IDE de vibe coding: o agente planeja, gera e modifica projetos full stack em tempo real.",
+      },
+    ],
+  }),
+  component: IdePage,
+});
 
-export function ActivityLog({ entries }: { entries: LogEntry[] }) {
-  const endRef = useRef<HTMLDivElement>(null);
+const PROGRESS_STEPS = [
+  "Interpretando a solicitação...",
+  "Planejando a arquitetura do projeto...",
+  "Gerando código (frontend e backend)...",
+  "Resolvendo dependências e configurações...",
+  "Iniciando servidores e atualizando o preview...",
+];
+
+function IdePage() {
+  const callAgent = useServerFn(runAgent);
+  const [files, setFiles] = useState<ProjectFile[]>([]);
+  const [entries, setEntries] = useState<LogEntry[]>([]);
+  const [projectName, setProjectName] = useState("");
+  const [activePath, setActivePath] = useState<string | null>(null);
+  const [view, setView] = useState<"preview" | "code">("preview");
+  const [busy, setBusy] = useState(false);
+  const [previewKey, setPreviewKey] = useState(0);
+  const [servers, setServers] = useState<ServerStatus[]>([]);
+  const [leftPanelOpen, setLeftPanelOpen] = useState(true);
+  const leftPanelRef = useRef<any>(null);
+
+  const [theme, setTheme] = useState<"dark" | "light">(() => {
+    if (typeof window === "undefined") return "dark";
+    const stored = window.localStorage.getItem("vibe-theme");
+    return stored === "light" ? "light" : "dark";
+  });
 
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [entries]);
+    const root = document.documentElement;
+    root.classList.toggle("dark", theme === "dark");
+    root.style.colorScheme = theme === "dark" ? "dark" : "light";
+    window.localStorage.setItem("vibe-theme", theme);
+  }, [theme]);
 
-  if (entries.length === 0) {
-    return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-3 px-8 text-center">
-        <div className="rounded-full border border-border bg-elevated p-3 shadow-sm">
-          <Sparkles className="size-5 text-primary" />
-        </div>
-        <h2 className="text-base font-semibold">Descreva o que quer construir</h2>
-        <p className="max-w-xs text-sm text-muted-foreground">
-          O agente planeja a arquitetura, gera o código full stack e mostra cada
-          passo aqui em tempo real.
-        </p>
-      </div>
-    );
-  }
+  const toggleTheme = useCallback(() => {
+    setTheme((t) => (t === "dark" ? "light" : "dark"));
+  }, []);
+
+  const toggleLeftPanel = useCallback(() => {
+    const panel = leftPanelRef.current;
+    if (!panel) return;
+    if (leftPanelOpen) {
+      panel.collapse();
+    } else {
+      panel.expand();
+    }
+  }, [leftPanelOpen]);
+
+  const previewDoc = useMemo(() => buildPreviewDocument(files), [files]);
+  const activeContent =
+    files.find((f) => f.path === activePath)?.content ?? "";
+
+  const submit = useCallback(
+    async (instruction: string) => {
+      const id = `${Date.now()}`;
+      setBusy(true);
+      setEntries((prev) => [
+        ...prev,
+        {
+          id,
+          instruction,
+          steps: [PROGRESS_STEPS[0]!],
+          status: "running",
+          createdAt: Date.now(),
+        },
+      ]);
+
+      let step = 1;
+      const ticker = window.setInterval(() => {
+        if (step >= PROGRESS_STEPS.length) return;
+        const next = PROGRESS_STEPS[step++]!;
+        setEntries((prev) =>
+          prev.map((e) =>
+            e.id === id ? { ...e, steps: [...e.steps, next] } : e,
+          ),
+        );
+      }, 2600);
+
+      try {
+        const history = entries
+          .filter((e) => e.summary)
+          .map((e) => ({ instruction: e.instruction, summary: e.summary! }));
+
+        const result = await callAgent({
+          data: { instruction, files, history },
+        });
+
+        window.clearInterval(ticker);
+
+        const merged = mergeFiles(files, result.files, result.deleted);
+        setFiles(merged);
+        if (result.projectName) setProjectName(result.projectName);
+        if (result.servers.length > 0) setServers(result.servers);
+        else if (servers.length === 0)
+          setServers([
+            { name: "Frontend", status: "Build concluído" },
+            { name: "Backend", status: "Rodando" },
+          ]);
+
+        const firstChanged = result.files[0]?.path;
+        if (firstChanged) setActivePath(firstChanged.replace(/^\.?\//, ""));
+        setPreviewKey((k) => k + 1);
+
+        setEntries((prev) =>
+          prev.map((e) =>
+            e.id === id
+              ? {
+                  ...e,
+                  status: "done",
+                  steps: [
+                    ...e.steps,
+                    ...result.plan.slice(0, 6),
+                    "Tarefa concluída.",
+                  ],
+                  summary: result.summary,
+                  commands: result.commands,
+                  changed: result.files.map((f) => f.path),
+                  deleted: result.deleted,
+                }
+              : e,
+          ),
+        );
+        toast.success("Projeto atualizado pelo agente.");
+      } catch (error) {
+        window.clearInterval(ticker);
+        const message =
+          error instanceof Error ? error.message : "Falha inesperada.";
+        setEntries((prev) =>
+          prev.map((e) =>
+            e.id === id ? { ...e, status: "error", summary: message } : e,
+          ),
+        );
+        toast.error(message);
+      } finally {
+        setBusy(false);
+      }
+    },
+    [callAgent, entries, files, servers.length],
+  );
 
   return (
-    <div className="flex-1 space-y-4 overflow-y-auto p-4">
-      {entries.map((entry) => (
-        <article key={entry.id} className="rounded-xl border border-border bg-elevated/60 shadow-sm">
-          <header className="flex items-start gap-2 border-b border-border px-3 py-2.5">
-            <Terminal className="mt-0.5 size-4 shrink-0 text-accent" />
-            <p className="flex-1 text-sm leading-snug text-foreground">
-              {entry.instruction}
-            </p>
-            <StatusIcon status={entry.status} />
-          </header>
+    <main className="flex h-screen flex-col overflow-hidden bg-background">
+      <header className="flex items-center gap-3 border-b border-border/60 bg-surface/80 backdrop-blur-xl px-4 py-2.5 shadow-sm">
+        <div className="grid size-9 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-md ring-1 ring-primary/30 transition-transform hover:scale-105">
+          <Bot className="size-4" />
+        </div>
+        <h1 className="text-sm font-bold tracking-tight text-foreground">
+          Xerife Brasa
+        </h1>
+        <span className="rounded-full border border-primary/20 bg-elevated/70 px-3 py-1 text-mono-xs text-muted-foreground shadow-sm backdrop-blur">
+          vibe coding · agente de IA
+        </span>
 
-          <div className="space-y-2 px-3 py-3">
-            <ol className="space-y-1.5">
-              {entry.steps.map((step, i) => (
-                <li
-                  key={`${entry.id}-${i}`}
-                  className="flex items-center gap-2 text-mono-xs text-muted-foreground"
-                >
-                  {entry.status === "running" && i === entry.steps.length - 1 ? (
-                    <CircleDashed className="size-3 animate-spin text-primary" />
-                  ) : (
-                    <CheckCircle2 className="size-3 text-success" />
-                  )}
-                  {step}
-                </li>
-              ))}
-            </ol>
+        <div className="ml-auto flex items-center gap-2">
+          <button
+            type="button"
+            onClick={toggleLeftPanel}
+            aria-label={leftPanelOpen ? "Minimizar painel lateral" : "Maximizar painel lateral"}
+            title={leftPanelOpen ? "Minimizar painel" : "Maximizar painel"}
+            className="grid size-8 place-items-center rounded-full border border-border bg-elevated/70 text-muted-foreground shadow-sm transition-all hover:shadow-md hover:text-foreground active:scale-95"
+          >
+            {leftPanelOpen ? <PanelLeftClose className="size-4" /> : <PanelLeftOpen className="size-4" />}
+          </button>
+          <button
+            type="button"
+            onClick={toggleTheme}
+            aria-label={theme === "dark" ? "Ativar tema claro" : "Ativar tema escuro"}
+            className="grid size-8 place-items-center rounded-full border border-border bg-elevated/70 text-muted-foreground shadow-sm transition-all hover:shadow-md hover:text-foreground active:scale-95"
+          >
+            {theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
+          </button>
+        </div>
+      </header>
 
-            {entry.commands && entry.commands.length > 0 && (
-              <div className="rounded-lg border border-border bg-background/60 p-2">
-                {entry.commands.map((cmd) => (
-                  <p key={cmd} className="text-mono-xs text-accent">
-                    $ {cmd}
-                  </p>
-                ))}
+      <ResizablePanelGroup orientation="horizontal" className="flex-1">
+        <ResizablePanel
+          ref={leftPanelRef}
+          defaultSize="34"
+          minSize="24"
+          collapsible
+          collapsedSize={0}
+          onCollapse={() => setLeftPanelOpen(false)}
+          onExpand={() => setLeftPanelOpen(true)}
+        >
+          <section className="flex h-full flex-col bg-surface/95 backdrop-blur">
+            <ActivityLog entries={entries} />
+            <CommandInput
+              onSubmit={submit}
+              busy={busy}
+              hasProject={files.length > 0}
+            />
+          </section>
+        </ResizablePanel>
+
+        <ResizableHandle />
+
+        <ResizablePanel defaultSize="66" minSize="35">
+          <section className="flex h-full flex-col bg-surface">
+            <ProjectToolbar
+              projectName={projectName}
+              view={view}
+              onViewChange={setView}
+              servers={servers}
+              fileCount={files.length}
+              busy={busy}
+              onRefresh={() => setPreviewKey((k) => k + 1)}
+              onDownload={() => {
+                void downloadProjectZip(files, projectName);
+                toast.success("Download iniciado.");
+              }}
+            />
+
+            {view === "preview" ? (
+              <div className="flex-1 overflow-hidden rounded-bl-2xl">
+                <PreviewFrame key={previewKey} doc={previewDoc} />
               </div>
+            ) : (
+              <ResizablePanelGroup orientation="horizontal" className="flex-1">
+                <ResizablePanel defaultSize="26" minSize="15">
+                  <div className="h-full border-r border-border/60 bg-background/40">
+                    <FileTree
+                      files={files}
+                      activePath={activePath}
+                      onSelect={setActivePath}
+                    />
+                  </div>
+                </ResizablePanel>
+                <ResizableHandle />
+                <ResizablePanel defaultSize="74">
+                  <CodeViewer
+                    path={activePath}
+                    content={activeContent}
+                    onChange={(value) =>
+                      setFiles((prev) =>
+                        prev.map((f) =>
+                          f.path === activePath ? { ...f, content: value } : f,
+                        ),
+                      )
+                    }
+                    dark={theme === "dark"}
+                  />
+                </ResizablePanel>
+              </ResizablePanelGroup>
             )}
-
-            {entry.summary && (
-              <div className="rounded-lg border border-primary/25 bg-primary/5 p-2.5">
-                <p className="text-sm leading-relaxed text-surface-foreground">
-                  {entry.summary}
-                </p>
-                {(entry.changed?.length || entry.deleted?.length) && (
-                  <p className="mt-2 text-mono-xs text-muted-foreground">
-                    {entry.changed?.length ?? 0} arquivo(s) escrito(s)
-                    {entry.deleted?.length
-                      ? ` · ${entry.deleted.length} removido(s)`
-                      : ""}
-                  </p>
-                )}
-              </div>
-            )}
-          </div>
-        </article>
-      ))}
-      <div ref={endRef} />
-    </div>
+          </section>
+        </ResizablePanel>
+      </ResizablePanelGroup>
+    </main>
   );
 }
+"
+    },
+    {
+      "path": "src/components/ide/ProjectToolbar.tsx
