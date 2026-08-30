@@ -10,10 +10,12 @@ export function CodeViewer({
   path,
   content,
   onChange,
+  dark,
 }: {
   path: string | null;
   content: string;
   onChange: (value: string) => void;
+  dark: boolean;
 }) {
   if (!path) {
     return (
@@ -38,7 +40,7 @@ export function CodeViewer({
         <MonacoEditor
           key={path}
           height="100%"
-          theme="vs-dark"
+          theme={dark ? "vs-dark" : "light"}
           language={languageForPath(path)}
           value={content}
           onChange={(v) => onChange(v ?? "")}

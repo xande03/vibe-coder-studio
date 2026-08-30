@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Bot } from "lucide-react";
+import { Bot, Moon, Sun } from "lucide-react";
 import {
   ResizableHandle,
   ResizablePanel,
@@ -26,6 +26,11 @@ import {
 
 export const Route = createFileRoute("/")({
   head: () => ({
+    scripts: [
+      {
+        children: `(function(){try{var t=localStorage.getItem('vibe-theme');if(t==='light'){document.documentElement.classList.remove('dark')}else{document.documentElement.classList.add('dark')}}catch(e){document.documentElement.classList.add('dark')}})();`,
+      },
+    ],
     meta: [
       { title: "Agnes IDE — Vibe Coding com agente de IA" },
       {
@@ -62,6 +67,23 @@ function IdePage() {
   const [busy, setBusy] = useState(false);
   const [previewKey, setPreviewKey] = useState(0);
   const [servers, setServers] = useState<ServerStatus[]>([]);
+
+  const [theme, setTheme] = useState<"dark" | "light">(() => {
+    if (typeof window === "undefined") return "dark";
+    const stored = window.localStorage.getItem("vibe-theme");
+    return stored === "light" ? "light" : "dark";
+  });
+
+  useEffect(() => {
+    const root = document.documentElement;
+    root.classList.toggle("dark", theme === "dark");
+    root.style.colorScheme = theme === "dark" ? "dark" : "light";
+    window.localStorage.setItem("vibe-theme", theme);
+  }, [theme]);
+
+  const toggleTheme = useCallback(() => {
+    setTheme((t) => (t === "dark" ? "light" : "dark"));
+  }, []);
 
   const previewDoc = useMemo(() => buildPreviewDocument(files), [files]);
   const activeContent =
@@ -165,6 +187,14 @@ function IdePage() {
         <span className="rounded-full border border-border bg-elevated px-2 py-0.5 text-mono-xs text-muted-foreground">
           vibe coding · agnes-2.5-flash
         </span>
+        <button
+          type="button"
+          onClick={toggleTheme}
+          aria-label={theme === "dark" ? "Ativar tema claro" : "Ativar tema escuro"}
+          className="ml-auto grid size-8 place-items-center rounded-md border border-border bg-elevated text-muted-foreground transition-colors hover:text-foreground"
+        >
+          {theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
+        </button>
       </header>
 
       <ResizablePanelGroup orientation="horizontal" className="flex-1">
@@ -224,6 +254,7 @@ function IdePage() {
                         ),
                       )
                     }
+                    dark={theme === "dark"}
                   />
                 </ResizablePanel>
               </ResizablePanelGroup>
