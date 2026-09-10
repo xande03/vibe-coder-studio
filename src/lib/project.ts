@@ -97,7 +97,59 @@ export function buildPreviewDocument(files: ProjectFile[]): string {
     },
   );
 
+  // Inline local images stored as data URLs (uploads).
+  html = html.replace(/(<img[^>]*\ssrc=)["']([^"']+)["']/gi, (tag, pre, src) => {
+    if (/^(https?:|data:)/i.test(src)) return tag;
+    const file = resolve(src);
+    if (!file || !file.content.startsWith("data:")) return tag;
+    return `${pre}"${file.content}"`;
+  });
+
   return html;
+}
+
+const TEXT_EXTENSIONS = new Set([
+  "txt","md","json","js","jsx","ts","tsx","css","scss","html","htm","py","yml",
+  "yaml","sql","sh","env","csv","xml","toml","ini","java","go","rb","php","c",
+  "cpp","h","rs","svg","vue","astro","gitignore","lock","conf",
+]);
+
+/** Reads user uploads into project files (text inline, binaries as data URLs). */
+export async function readUploads(uploads: File[]): Promise<ProjectFile[]> {
+  const isText = (file: File) => {
+    const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
+    return (
+      TEXT_EXTENSIONS.has(ext) ||
+      file.type.startsWith("text/") ||
+      file.type === "application/json"
+    );
+  };
+
+  const readAs = (file: File, mode: "text" | "dataUrl") =>
+    new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = () => reject(reader.error);
+      reader.onload = () => resolve(String(reader.result ?? ""));
+      if (mode === "text") reader.readAsText(file);
+      else reader.readAsDataURL(file);
+    });
+
+  const results: ProjectFile[] = [];
+  for (const upload of uploads) {
+    const safeName = upload.name.replace(/[^\w.\-]+/g, "-");
+    if (isText(upload)) {
+      results.push({
+        path: `uploads/${safeName}`,
+        content: await readAs(upload, "text"),
+      });
+    } else {
+      results.push({
+        path: `assets/${safeName}`,
+        content: await readAs(upload, "dataUrl"),
+      });
+    }
+  }
+  return results;
 }
 
 export type TreeNode = {

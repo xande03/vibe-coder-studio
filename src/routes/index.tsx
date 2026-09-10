@@ -104,9 +104,18 @@ function IdePage() {
     files.find((f) => f.path === activePath)?.content ?? "";
 
   const submit = useCallback(
-    async (instruction: string) => {
+    async (instruction: string, attachments: ProjectFile[] = []) => {
       const id = `${Date.now()}`;
       setBusy(true);
+
+      const withUploads =
+        attachments.length > 0 ? mergeFiles(files, attachments) : files;
+      if (attachments.length > 0) {
+        setFiles(withUploads);
+        toast.success(
+          `${attachments.length} arquivo(s) enviado(s) para o projeto.`,
+        );
+      }
       setEntries((prev) => [
         ...prev,
         {
@@ -134,13 +143,32 @@ function IdePage() {
           .filter((e) => e.summary)
           .map((e) => ({ instruction: e.instruction, summary: e.summary! }));
 
+        // Binários (data URLs) não são enviados na íntegra ao agente.
+        const payloadFiles = withUploads.map((f) =>
+          f.content.startsWith("data:")
+            ? {
+                path: f.path,
+                content: `/* arquivo binário enviado pelo usuário (${f.content.slice(5, f.content.indexOf(";")) || "binário"}). Referencie por este caminho relativo; não reescreva o conteúdo. */`,
+              }
+            : f,
+        );
+
+        const uploadNote =
+          attachments.length > 0
+            ? `\n\nARQUIVOS ENVIADOS AGORA PELO USUÁRIO: ${attachments.map((a) => a.path).join(", ")}. Use-os no projeto pelos caminhos indicados e não altere seu conteúdo.`
+            : "";
+
         const result = await callAgent({
-          data: { instruction, files, history },
+          data: {
+            instruction: `${instruction}${uploadNote}`,
+            files: payloadFiles,
+            history,
+          },
         });
 
         window.clearInterval(ticker);
 
-        const merged = mergeFiles(files, result.files, result.deleted);
+        const merged = mergeFiles(withUploads, result.files, result.deleted);
         setFiles(merged);
         if (result.projectName) setProjectName(result.projectName);
         if (result.servers.length > 0) setServers(result.servers);

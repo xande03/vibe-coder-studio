@@ -78,7 +78,7 @@ export function ProjectToolbar({
             title={server.status}
             className="hidden items-center gap-1.5 rounded-full border border-border bg-elevated/70 px-2.5 py-1 text-mono-xs text-muted-foreground shadow-sm md:inline-flex"
           >
-            <span className="size-1.5 rounded-full bg-emerald-500" />
+            <span className="size-1.5 rounded-full bg-success" />
             {server.name}
           </span>
         ))}
