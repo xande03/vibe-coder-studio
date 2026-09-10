@@ -299,7 +299,3 @@ function IdePage() {
     </main>
   );
 }
-"
-    },
-    {
-      "path": "src/components/ide/ProjectToolbar.tsx
