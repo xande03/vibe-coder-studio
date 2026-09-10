@@ -86,6 +86,30 @@
 
 .dark {
   color-scheme: dark;
+  --background: oklch(0.12 0.02 160);
+  --foreground: oklch(0.98 0.006 264);
+  --surface: oklch(0.14 0.014 264);
+  --surface-foreground: oklch(0.93 0.006 264);
+  --elevated: oklch(0.18 0.016 264);
+  --card: oklch(0.14 0.014 264);
+  --card-foreground: oklch(0.93 0.006 264);
+  --popover: oklch(0.16 0.015 264);
+  --popover-foreground: oklch(0.93 0.006 264);
+  --primary: oklch(0.65 0.15 82);
+  --primary-foreground: oklch(0.98 0.03 70);
+  --secondary: oklch(0.21 0.018 264);
+  --secondary-foreground: oklch(0.92 0.006 264);
+  --muted: oklch(0.19 0.014 264);
+  --muted-foreground: oklch(0.68 0.014 264);
+  --accent: oklch(0.65 0.12 195);
+  --accent-foreground: oklch(0.98 0.02 240);
+  --destructive: oklch(0.63 0.2 22);
+  --destructive-foreground: oklch(0.97 0.01 22);
+  --success: oklch(0.74 0.15 152);
+  --warning: oklch(0.8 0.15 75);
+  --border: oklch(0.22 0.016 264);
+  --input: oklch(0.22 0.016 264);
+  --ring: oklch(0.65 0.15 82);
 }
 
 @layer base {
