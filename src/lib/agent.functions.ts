@@ -29,9 +29,17 @@ REGRAS CRÍTICAS:
 }
 3. "files" contém o conteúdo COMPLETO de cada arquivo criado ou alterado (nunca diffs, nunca "...").
 4. Só inclua arquivos que precisam ser criados ou modificados neste passo. Mantenha os outros intactos.
-5. O preview é renderizado a partir de "index.html" na raiz do projeto. SEMPRE crie/mantenha um index.html na raiz que funcione sem build: HTML + CSS + JS puros ou React via CDN (esm.sh/unpkg) com <script type="module">. Referencie styles.css / app.js por caminho relativo — eles são resolvidos automaticamente.
-6. Para projetos full stack, gere também o backend real (ex.: server/index.js, requirements.txt, package.json) e faça o frontend funcionar no preview com dados mock quando o backend não estiver acessível.
-7. Escreva código limpo, moderno, responsivo e bonito. Sem placeholders do tipo "TODO".
+5. O preview é renderizado a partir de "index.html" na raiz do projeto. SEMPRE crie/mantenha um index.html na raiz que funcione sem build: HTML + CSS + JS puros ou React via CDN (esm.sh/unpkg) com <script type="module">. Referencie arquivos locais (ex.: src/styles/main.css, src/js/app.js, assets/foto.png) por caminho relativo — eles são resolvidos automaticamente.
+6. ARQUITETURA OBRIGATÓRIA: nunca entregue tudo num único arquivo e nunca junte HTML+CSS+JS no mesmo arquivo. Separe o projeto em uma estrutura full stack organizada por camadas e responsabilidades, por exemplo:
+   - index.html (apenas markup e referências)
+   - src/styles/tokens.css, src/styles/main.css, src/styles/components.css
+   - src/js/app.js (bootstrap), src/js/api.js (chamadas HTTP), src/js/state.js, src/js/components/*.js, src/js/utils/*.js
+   - server/index.js (API), server/routes/*.js, server/controllers/*.js, server/services/*.js, server/models/*.js, server/db.js
+   - package.json, .env.example, README.md
+   Adapte os nomes ao stack pedido (Node/Express, Python/FastAPI, etc.), mas mantenha SEMPRE frontend, estilos, lógica e backend em arquivos e pastas separados, com módulos pequenos e coesos.
+7. Sempre gere o backend real quando houver dados, autenticação, persistência ou integrações (rotas, controllers, serviços, modelos, migrações/schema). No preview o frontend deve funcionar com dados mock (src/js/mocks.js) quando a API não estiver acessível.
+8. Arquivos enviados pelo usuário (imagens, dados, documentos) aparecem no contexto em uploads/ ou assets/. Referencie-os pelos caminhos existentes, integre-os ao layout/lógica e NUNCA reescreva o conteúdo de binários.
+9. Escreva código limpo, moderno, responsivo e bonito. Sem placeholders do tipo "TODO".
 8. Todos os textos de UI e o summary em português do Brasil.`;
 
 function buildContext(files: { path: string; content: string }[]) {
