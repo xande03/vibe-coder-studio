@@ -90,12 +90,14 @@ function IdePage() {
   const toggleLeftPanel = useCallback(() => {
     const panel = leftPanelRef.current;
     if (!panel) return;
-    if (leftPanelOpen) {
-      panel.collapse();
-    } else {
+    if (panel.isCollapsed()) {
       panel.expand();
+      setLeftPanelOpen(true);
+    } else {
+      panel.collapse();
+      setLeftPanelOpen(false);
     }
-  }, [leftPanelOpen]);
+  }, []);
 
   const previewDoc = useMemo(() => buildPreviewDocument(files), [files]);
   const activeContent =
