@@ -128,10 +128,30 @@ export const runAgent = createServerFn({ method: "POST" })
       throw new Error("Não foi possível interpretar o plano do agente.");
     }
 
+    // O agente às vezes devolve itens em formatos alternativos; normalizamos.
+    const LooseFile = z.preprocess((raw) => {
+      if (typeof raw === "string") {
+        const nl = raw.indexOf("\n");
+        return nl === -1
+          ? { path: raw.trim(), content: "" }
+          : { path: raw.slice(0, nl).trim(), content: raw.slice(nl + 1) };
+      }
+      if (raw && typeof raw === "object") {
+        const o = raw as Record<string, unknown>;
+        const path = o["path"] ?? o["file"] ?? o["filename"] ?? o["name"];
+        const content = o["content"] ?? o["code"] ?? o["source"] ?? "";
+        return { path: String(path ?? ""), content: String(content) };
+      }
+      return { path: "", content: "" };
+    }, FileInput);
+
     const Shape = z.object({
       projectName: z.string().optional(),
       plan: z.array(z.string()).default([]),
-      files: z.array(FileInput).default([]),
+      files: z
+        .array(LooseFile)
+        .default([])
+        .transform((fs) => fs.filter((f) => f.path.length > 0)),
       deleted: z.array(z.string()).default([]),
       commands: z.array(z.string()).default([]),
       servers: z
