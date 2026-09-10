@@ -50,7 +50,7 @@
   --font-heading: "Sora", ui-sans-serif, system-ui, sans-serif;
   --font-code: "JetBrains Mono", ui-monospace, monospace;
 
-  --background: oklch(0.16 0.012 150);
+  --background: oklch(0.17 0.02 160);
   --foreground: oklch(0.94 0.006 264);
   --surface: oklch(0.2 0.014 264);
   --surface-foreground: oklch(0.93 0.006 264);
