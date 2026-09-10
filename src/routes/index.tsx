@@ -225,13 +225,11 @@ function IdePage() {
 
       <ResizablePanelGroup orientation="horizontal" className="flex-1">
         <ResizablePanel
-          ref={leftPanelRef}
+          panelRef={leftPanelRef}
           defaultSize="34"
           minSize="24"
           collapsible
           collapsedSize={0}
-          onCollapse={() => setLeftPanelOpen(false)}
-          onExpand={() => setLeftPanelOpen(true)}
         >
           <section className="flex h-full flex-col bg-surface/95 backdrop-blur">
             <ActivityLog entries={entries} />
