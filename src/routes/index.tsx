@@ -104,9 +104,18 @@ function IdePage() {
     files.find((f) => f.path === activePath)?.content ?? "";
 
   const submit = useCallback(
-    async (instruction: string) => {
+    async (instruction: string, attachments: ProjectFile[] = []) => {
       const id = `${Date.now()}`;
       setBusy(true);
+
+      const withUploads =
+        attachments.length > 0 ? mergeFiles(files, attachments) : files;
+      if (attachments.length > 0) {
+        setFiles(withUploads);
+        toast.success(
+          `${attachments.length} arquivo(s) enviado(s) para o projeto.`,
+        );
+      }
       setEntries((prev) => [
         ...prev,
         {
