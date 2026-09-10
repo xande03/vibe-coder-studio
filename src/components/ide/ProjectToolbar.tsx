@@ -1,7 +1,7 @@
 import { Code2, Download, Eye, RefreshCw, Rocket, Sun, Moon } from "lucide-react";
 import { type ServerStatus } from "@/lib/project";
-import { useTheme } from "next-themes";
-import { useEffect, useState } from "react";
+
+type Theme = "dark" | "light";
 
 export function ProjectToolbar({
   projectName,
@@ -12,6 +12,8 @@ export function ProjectToolbar({
   busy,
   onRefresh,
   onDownload,
+  theme,
+  onToggleTheme,
 }: {
   projectName: string;
   view: "preview" | "code";
@@ -21,38 +23,9 @@ export function ProjectToolbar({
   busy: boolean;
   onRefresh: () => void;
   onDownload: () => void;
+  theme: Theme;
+  onToggleTheme: () => void;
 }) {
-  const { theme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted) {
-    return (
-      <div className="flex flex-wrap items-center gap-2 border-b border-border/60 bg-surface/80 px-3 py-2 backdrop-blur">
-        <div className="flex min-w-0 items-center gap-2">
-          <div className="grid size-8 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary shadow-inner">
-            <Rocket className="size-4" />
-          </div>
-          <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-foreground">
-              {projectName || "Projeto sem nome"}
-            </p>
-            <p className="text-mono-xs text-muted-foreground">
-              {fileCount} arquivo{fileCount === 1 ? "" : "s"}
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const toggleTheme = () => {
-    setTheme(theme === "dark" ? "light" : "dark");
-  };
-
   return (
     <div className="flex flex-wrap items-center gap-2 border-b border-border/60 bg-surface/80 px-3 py-2 backdrop-blur">
       <div className="flex min-w-0 items-center gap-2">
@@ -134,7 +107,7 @@ export function ProjectToolbar({
 
         <button
           type="button"
-          onClick={toggleTheme}
+          onClick={onToggleTheme}
           title={theme === "dark" ? "Tema claro" : "Tema escuro"}
           aria-label={theme === "dark" ? "Tema claro" : "Tema escuro"}
           className="grid size-8 place-items-center rounded-full border border-border bg-elevated/70 text-muted-foreground shadow-sm transition-all hover:shadow-md hover:text-foreground active:scale-95"

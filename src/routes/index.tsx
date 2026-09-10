@@ -259,6 +259,8 @@ function IdePage() {
                 void downloadProjectZip(files, projectName);
                 toast.success("Download iniciado.");
               }}
+              theme={theme}
+              onToggleTheme={toggleTheme}
             />
 
             {view === "preview" ? (
